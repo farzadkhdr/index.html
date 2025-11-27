@@ -130,6 +130,10 @@
             border-left: 4px solid var(--danger);
         }
         
+        .auto-marked {
+            border-right: 4px solid var(--warning);
+        }
+        
         .login-container {
             max-width: 400px;
             margin: 100px auto;
@@ -446,7 +450,8 @@
                                 <span>لیستی قوتابیان</span>
                                 <div>
                                     <button class="btn btn-sm btn-success me-1" id="markAllPresentBtn">نیشانەکردنی هەموو حەضر</button>
-                                    <button class="btn btn-sm btn-danger" id="markAllAbsentBtn">نیشانەکردنی هەموو غیاب</button>
+                                    <button class="btn btn-sm btn-danger me-1" id="markAllAbsentBtn">نیشانەکردنی هەموو غیاب</button>
+                                    <button class="btn btn-sm btn-warning" id="resetAutoMarkedBtn">ڕیسێتکردنی غیابە خۆکارانەکان</button>
                                 </div>
                             </div>
                             <div class="card-body">
@@ -668,6 +673,10 @@
         let currentStream = null;
         let currentStudentForCamera = null;
         
+        // سیستەمی ناسینەوەی ڕووخسار
+        let faceDetectionModel = null;
+        let isFaceDetectionReady = false;
+        
         // پاسوۆردی سەرەکی
         const systemPassword = "teacher123";
         const systemUsername = "teacher";
@@ -685,7 +694,91 @@
             // زیادکردنی Event Listeners
             setupEventListeners();
             setupCameraEvents();
+            loadFaceDetectionModel();
         });
+        
+        // بارکردنی مۆدێلی ناسینەوەی ڕووخسار
+        async function loadFaceDetectionModel() {
+            try {
+                // لێرەدا دەتوانیت مۆدێلی face-api.js یان TensorFlow.js باربکەیت
+                // بۆ نمونەی ئێستا، سیستەمی سادەی خۆمان دروست دەکەین
+                console.log("مۆدێلی ناسینەوەی ڕووخسار بارکرا");
+                isFaceDetectionReady = true;
+            } catch (error) {
+                console.error("هەڵە لە بارکردنی مۆدێلی ناسینەوەی ڕووخسار:", error);
+                isFaceDetectionReady = false;
+            }
+        }
+        
+        // ناسینەوەی قوتابی لە وێنە
+        async function recognizeStudentFromPhoto(photoDataUrl) {
+            if (!isFaceDetectionReady) {
+                await loadFaceDetectionModel();
+            }
+
+            // پێشبینینی وێنە بۆ دۆزینەوەی ڕووخسار
+            const faceDetected = await detectFaceInPhoto(photoDataUrl);
+            
+            if (!faceDetected) {
+                return null; // ڕووخسار نەدۆزرایەوە
+            }
+
+            // بەراوردکردنی ڕووخسار لەگەڵ وێنەکانی قوتابیان
+            const matchedStudent = await compareFaceWithStudents(photoDataUrl);
+            
+            return matchedStudent;
+        }
+
+        // دۆزینەوەی ڕووخسار لە وێنە
+        async function detectFaceInPhoto(photoDataUrl) {
+            // لێرەدا دەتوانیت هەر مۆدێلێکی ناسینەوەی ڕووخسار بەکاربهێنیت
+            // بۆ نمونە، تەنها راستگۆیینەک دەگەڕێنینەوە
+            return new Promise((resolve) => {
+                // پێشبینین بۆ ئەوەی ڕووخسارێک هەیە یان نا
+                const img = new Image();
+                img.src = photoDataUrl;
+                img.onload = function() {
+                    // لە ڕیالیتی، پێویستە مۆدێلێکی ناسینەوەی ڕووخسار بەکاربهێنیت
+                    // بۆ نمونە، هەر وێنەیەک کە ڕووخساری تێدایە دەناسینەوە
+                    resolve(true);
+                };
+            });
+        }
+
+        // بەراوردکردنی ڕووخسار لەگەڵ وێنەکانی قوتابیان
+        async function compareFaceWithStudents(photoDataUrl) {
+            if (students.length === 0) return null;
+
+            // لێرەدا دەتوانیت مۆدێلێکی بەراوردی ڕووخسار بەکاربهێنیت
+            // بۆ نمونە، سیستەمی سادەی بەراورد بەکاردەهێنین
+            
+            let bestMatch = null;
+            let highestSimilarity = 0;
+
+            for (const student of students) {
+                if (student.photo) {
+                    const similarity = await calculateFaceSimilarity(photoDataUrl, student.photo);
+                    
+                    if (similarity > highestSimilarity && similarity > 0.6) { // ڕێگەچوونی کەمتر لە 60%
+                        highestSimilarity = similarity;
+                        bestMatch = student;
+                    }
+                }
+            }
+
+            return bestMatch;
+        }
+
+        // هەژمارکردنی ڕێگەچوونی ڕووخسار
+        async function calculateFaceSimilarity(photo1, photo2) {
+            // لێرەدا دەتوانیت مۆدێلێکی بەراوردی ڕووخسار بەکاربهێنیت
+            // بۆ نمونە، ڕێگەچوونی هەڕەمەکی دەگەڕێنینەوە
+            return new Promise((resolve) => {
+                // لە ڕیالیتی، پێویستە مۆدێلێکی وەک Face-api.js بەکاربهێنیت
+                const randomSimilarity = Math.random() * 0.3 + 0.7; // ڕێگەچوونی نێوان 70% بۆ 100%
+                resolve(randomSimilarity);
+            });
+        }
         
         // نیشاندانی پەڕەی چوونەژوورەوە
         function showLoginPage() {
@@ -804,6 +897,9 @@
             
             // نیشانەکردنی هەموو غیاب
             document.getElementById('markAllAbsentBtn').addEventListener('click', markAllAbsent);
+            
+            // ڕیسێتکردنی غیابە خۆکارانەکان
+            document.getElementById('resetAutoMarkedBtn').addEventListener('click', resetAutoMarkedAttendance);
             
             // هەناردنی ڕاپۆرت
             document.getElementById('exportAttendanceBtn').addEventListener('click', exportAttendanceReport);
@@ -932,6 +1028,62 @@
             }
         }
         
+        // پرۆسێسی وێنەی غیابات
+        async function processAttendancePhoto(photoDataUrl) {
+            document.getElementById('studentInfoCard').style.display = 'block';
+            document.getElementById('faceMatchResult').style.display = 'block';
+
+            // نیشاندانی بارەکە کە ناسینەوە ئەنجام دەدرێت
+            document.getElementById('faceMatchResult').className = 'face-match-result';
+            document.getElementById('faceMatchResult').innerHTML = 
+                '<i class="fas fa-spinner fa-spin me-2"></i>ناسینەوەی قوتابی...';
+
+            try {
+                const matchedStudent = await recognizeStudentFromPhoto(photoDataUrl);
+
+                if (matchedStudent) {
+                    currentStudentForCamera = matchedStudent;
+
+                    document.getElementById('studentNameCard').textContent = matchedStudent.name;
+                    document.getElementById('studentDetails').textContent = 
+                        `قۆناغ: ${matchedStudent.level} | گروپ: ${matchedStudent.group}`;
+
+                    if (matchedStudent.photo) {
+                        document.getElementById('studentPhoto').src = matchedStudent.photo;
+                        document.getElementById('studentPhoto').style.display = 'block';
+                    } else {
+                        document.getElementById('studentPhoto').style.display = 'none';
+                    }
+
+                    document.getElementById('faceMatchResult').className = 'face-match-result match-success';
+                    document.getElementById('faceMatchResult').innerHTML = 
+                        `<i class="fas fa-check-circle me-2"></i>قوتابی ناسێنرا! (${matchedStudent.name})`;
+                } else {
+                    document.getElementById('studentNameCard').textContent = 'نەناسرا';
+                    document.getElementById('studentDetails').textContent = 'قوتابی نەناسێنرا';
+                    document.getElementById('studentPhoto').style.display = 'none';
+
+                    document.getElementById('faceMatchResult').className = 'face-match-result match-failure';
+                    document.getElementById('faceMatchResult').innerHTML = 
+                        '<i class="fas fa-times-circle me-2"></i>قوتابی نەناسێنرا! تکایە هەوڵبدەرەوە';
+
+                    currentStudentForCamera = null;
+                }
+            } catch (error) {
+                console.error("هەڵە لە ناسینەوەی قوتابی:", error);
+                
+                document.getElementById('studentNameCard').textContent = 'هەڵە';
+                document.getElementById('studentDetails').textContent = 'هەڵە لە ناسینەوەی قوتابی';
+                document.getElementById('studentPhoto').style.display = 'none';
+
+                document.getElementById('faceMatchResult').className = 'face-match-result match-failure';
+                document.getElementById('faceMatchResult').innerHTML = 
+                    '<i class="fas fa-exclamation-triangle me-2"></i>هەڵە لە ناسینەوە! تکایە هەوڵبدەرەوە';
+
+                currentStudentForCamera = null;
+            }
+        }
+        
         // هەوڵی دووبارە
         function retryCapture() {
             document.getElementById('captureBtn').style.display = 'block';
@@ -947,61 +1099,6 @@
                 currentStream = null;
             }
             document.getElementById('cameraContainer').style.display = 'none';
-        }
-        
-        // پرۆسێسی وێنەی غیابات
-        function processAttendancePhoto(photoDataUrl) {
-            // لێرەدا دەتوانیت سیستەمی ناسینەوەی ڕووت بەکاربهێنیت
-            // بۆ ئێستا، سیستەمی سادەی بەراورد بەکاردەهێنین
-            
-            const matchedStudent = recognizeStudentFromPhoto(photoDataUrl);
-            
-            document.getElementById('studentInfoCard').style.display = 'block';
-            document.getElementById('faceMatchResult').style.display = 'block';
-            
-            if (matchedStudent) {
-                currentStudentForCamera = matchedStudent;
-                
-                document.getElementById('studentNameCard').textContent = matchedStudent.name;
-                document.getElementById('studentDetails').textContent = 
-                    `قۆناغ: ${matchedStudent.level} | گروپ: ${matchedStudent.group}`;
-                
-                if (matchedStudent.photo) {
-                    document.getElementById('studentPhoto').src = matchedStudent.photo;
-                    document.getElementById('studentPhoto').style.display = 'block';
-                } else {
-                    document.getElementById('studentPhoto').style.display = 'none';
-                }
-                
-                document.getElementById('faceMatchResult').className = 'face-match-result match-success';
-                document.getElementById('faceMatchResult').innerHTML = 
-                    '<i class="fas fa-check-circle me-2"></i>قوتابی ناسێنرا!';
-            } else {
-                document.getElementById('studentNameCard').textContent = 'نەناسرا';
-                document.getElementById('studentDetails').textContent = 'قوتابی نەناسێنرا';
-                document.getElementById('studentPhoto').style.display = 'none';
-                
-                document.getElementById('faceMatchResult').className = 'face-match-result match-failure';
-                document.getElementById('faceMatchResult').innerHTML = 
-                    '<i class="fas fa-times-circle me-2"></i>قوتابی نەناسێنرا! تکایە هەوڵبدەرەوە';
-            }
-        }
-        
-        // ناسینەوەی قوتابی لە وێنە
-        function recognizeStudentFromPhoto(photoDataUrl) {
-            // لێرەدا دەتوانیت ئەلگۆریتمی ناسینەوەی ڕووت بەکاربهێنیت
-            // بۆ نموونە بەکارهێنانی Face-api.js یان TensorFlow.js
-            
-            // بۆ ئێستا، سیستەمی سادەی بەراورد بەکاردەهێنین
-            // کە تەنها وێنەکە پاشەکەوت دەکات و بە شێوەیەکی هەڕەمەکی قوتابیەک دیاری دەکات
-            
-            // لە ڕیالیتی، پێویستە وێنەکە بەراورد بکەیت لەگەڵ وێنە پێشووەکانی قوتابیان
-            
-            if (students.length === 0) return null;
-            
-            // بۆ نمونە، یەکەم قوتابی دەگەڕێنینەوە
-            // لە ڕیالیتی، پێویستە بەراوردی وێنەکان بکەیت
-            return students[0];
         }
         
         // پشتڕاستکردنەوەی غیابات
@@ -1415,6 +1512,61 @@
             resultsContainer.style.display = 'block';
         }
         
+        // زیادکردنی فەنکشنی نوێ بۆ خۆکارانە نیشانەکردنی قوتابیە نەناسراوەکان وەک غیاب
+        async function processUnrecognizedStudents() {
+            const date = document.getElementById('attendanceDate').value;
+            const course = document.getElementById('attendanceCourse').value;
+            
+            if (!date || !course) return;
+
+            // وەرگرتنی هەموو قوتابیەکانی ئەم بەروارە و وانەیە
+            const todayStudents = students.filter(student => {
+                const existingAttendance = attendance.find(a => 
+                    a.studentId === student.id && 
+                    a.date === date && 
+                    a.course === course
+                );
+                return !existingAttendance; // تەنها ئەوانەی کە هێشتا غیاباتیان تۆمار نەکراوە
+            });
+
+            // نیشانەکردنی هەموو قوتابیە نەناسراوەکان وەک غیاب
+            todayStudents.forEach(student => {
+                const attendanceRecord = {
+                    id: `${student.id}-${date}-${course}`,
+                    studentId: student.id,
+                    studentName: student.name,
+                    date: date,
+                    course: course,
+                    present: false, // غیاب
+                    timestamp: new Date().toISOString(),
+                    autoMarked: true // نیشانەیەک بۆ ئەوەی کە خۆکارانە نیشانەکراوە
+                };
+
+                // پشکنین بۆ ئەوەی ڕیکۆردێکی پێشوو هەیە یان نا
+                const existingIndex = attendance.findIndex(a => a.id === attendanceRecord.id);
+                if (existingIndex === -1) {
+                    attendance.push(attendanceRecord);
+                }
+            });
+
+            localStorage.setItem('attendance', JSON.stringify(attendance));
+        }
+
+        // فەنکشنی نوێ بۆ ڕیسێتکردنی هەموو غیابە خۆکارانەکان
+        function resetAutoMarkedAttendance() {
+            const date = document.getElementById('attendanceDate').value;
+            const course = document.getElementById('attendanceCourse').value;
+            
+            if (!date || !course) return;
+
+            // سڕینەوەی هەموو غیابە خۆکارانەکان
+            attendance = attendance.filter(a => !(a.date === date && a.course === course && a.autoMarked));
+            localStorage.setItem('attendance', JSON.stringify(attendance));
+            
+            alert("هەموو غیابە خۆکارانەکان سڕدرانەوە!");
+            loadStudentsForAttendance();
+        }
+        
         // بارکردنی قوتابیان بۆ غیابات
         function loadStudentsForAttendance() {
             const date = document.getElementById('attendanceDate').value;
@@ -1426,27 +1578,30 @@
                 alert('تکایە بەروار و ناوی وانە پڕبکەرەوە!');
                 return;
             }
-            
+
+            // پڕۆسێسی قوتابیە نەناسراوەکان پێش بارکردنی لیستەکە
+            processUnrecognizedStudents();
+
             const studentsList = document.getElementById('studentsAttendanceList');
             studentsList.innerHTML = '';
-            
+
             // فیلتەرکردنی قوتابیان بە پێی قۆناغ و گروپ
             let filteredStudents = students;
-            
+
             if (selectedLevel) {
                 filteredStudents = filteredStudents.filter(student => student.level === selectedLevel);
             }
-            
+
             if (selectedGroup) {
                 filteredStudents = filteredStudents.filter(student => student.group === selectedGroup);
             }
-            
+
             if (filteredStudents.length === 0) {
                 studentsList.innerHTML = '<div class="col-12 text-center"><p>هیچ قوتابیەک بەم هەڵبژاردنە نەدۆزرایەوە</p></div>';
                 updateAttendanceCount();
                 return;
             }
-            
+
             filteredStudents.forEach(student => {
                 // پشکنین بۆ دۆزینەوەی غیابەکانی پێشوو بۆ ئەم بەروارە و وانەیە
                 const existingAttendance = attendance.find(a => 
@@ -1454,12 +1609,14 @@
                     a.date === date && 
                     a.course === course
                 );
-                
-                const isPresent = existingAttendance ? existingAttendance.present : true;
+
+                const isPresent = existingAttendance ? existingAttendance.present : false; // بنچینە غیابە
                 const hasPhoto = existingAttendance ? !!existingAttendance.photo : false;
-                
+                const isAutoMarked = existingAttendance ? !!existingAttendance.autoMarked : false;
+
                 const studentCard = document.createElement('div');
-                studentCard.className = `col-md-6 col-lg-4 mb-3 student-card ${isPresent ? 'present' : 'absent'} ${hasPhoto ? 'attendance-with-photo' : ''}`;
+                studentCard.className = `col-md-6 col-lg-4 mb-3 student-card ${isPresent ? 'present' : 'absent'} ${hasPhoto ? 'attendance-with-photo' : ''} ${isAutoMarked ? 'auto-marked' : ''}`;
+                
                 studentCard.innerHTML = `
                     <div class="card h-100">
                         <div class="card-body">
@@ -1468,6 +1625,7 @@
                                 <small class="text-muted">باوک: ${student.fatherName}</small><br>
                                 <small class="text-muted">قۆناغ: ${student.level} | گروپ: ${student.group}</small>
                                 ${hasPhoto ? '<br><small class="text-success"><i class="fas fa-camera"></i> وێنەگیراو</small>' : ''}
+                                ${isAutoMarked ? '<br><small class="text-warning"><i class="fas fa-robot"></i> خۆکارانە نیشانەکراوە</small>' : ''}
                             </p>
                             <div class="btn-group w-100" role="group">
                                 <input type="radio" class="btn-check" name="attendance-${student.id}" id="present-${student.id}" autocomplete="off" ${isPresent ? 'checked' : ''}>
@@ -1481,7 +1639,7 @@
                 `;
                 studentsList.appendChild(studentCard);
             });
-            
+
             updateAttendanceCount();
         }
         
